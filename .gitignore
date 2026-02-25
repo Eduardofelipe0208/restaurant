@@ -1,0 +1,17 @@
+# PHP built-in server
+.php-server
+
+# Temp files
+*.tmp
+*.log
+
+# Sensitive info
+config.php
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database exports (optional, but good to have a dedicated .sql file)
+# database.sql

@@ -1,0 +1,21 @@
+{
+  "name": "Gochaburguer Menú",
+  "short_name": "GMenu",
+  "description": "Menú Digital Boutique para Restaurantes",
+  "start_url": "index.php",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#FF6B35",
+  "icons": [
+    {
+      "src": "assets/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

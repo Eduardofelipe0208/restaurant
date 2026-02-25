@@ -1,0 +1,27 @@
+# Security & Rewrites
+RewriteEngine On
+
+# Redirect /mesa/X to index.php?mesa=X
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^mesa/(\d+)$ index.php?mesa=$1 [QSA,L]
+
+# Redirect index.html to index.php
+RewriteRule ^index\.html$ index.php [L,R=301]
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^\.|\.sql$|config\.php|db\.php|auth\.php">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Security headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options DENY
+Header always set X-XSS-Protection "1; mode=block"
+
+# Error Handling
+ErrorDocument 404 index.php
