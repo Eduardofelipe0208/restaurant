@@ -67,8 +67,15 @@
                 <input type="number" step="0.01" id="prod-price" placeholder="Precio USD" required class="btn-primary" style="background: rgba(255,255,255,0.05); text-align: left; margin-bottom: 1rem;">
                 <textarea id="prod-desc" placeholder="Descripción" class="btn-primary" style="background: rgba(255,255,255,0.05); text-align: left; margin-bottom: 1rem; height: 100px;"></textarea>
                 <input type="text" id="prod-img" placeholder="URL Imagen" class="btn-primary" style="background: rgba(255,255,255,0.05); text-align: left; margin-bottom: 1rem;">
-                <button type="submit" class="btn-primary">Guardar</button>
-                <button type="button" onclick="closeModal()" id="close-modal">Cancelar</button>
+                
+                <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                    <h3>Variantes / Extras</h3>
+                    <div id="variant-list" style="margin-top: 0.5rem;"></div>
+                    <button type="button" class="btn-primary" style="width: auto; padding: 0.5rem 1rem; margin-top: 0.5rem;" onclick="addVariantRow()">+ Añadir Extra</button>
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 2rem;">Guardar Producto</button>
+                <button type="button" onclick="closeModal()" id="close-modal" style="background:transparent; border:none; color:var(--text-muted); width:100%; margin-top:0.5rem;">Cancelar</button>
             </form>
         </div>
     </div>
@@ -176,19 +183,45 @@
         window.openModal = () => {
             document.getElementById('product-form').reset();
             document.getElementById('prod-id').value = '';
+            document.getElementById('variant-list').innerHTML = '';
             document.getElementById('modal-title').textContent = 'Nuevo Producto';
             document.getElementById('product-modal').style.display = 'flex';
         };
 
+        window.addVariantRow = (name = '', price = 0) => {
+            const div = document.createElement('div');
+            div.className = 'variant-row';
+            div.style.display = 'flex';
+            div.style.gap = '0.5rem';
+            div.style.marginBottom = '0.5rem';
+            div.innerHTML = `
+                <input type="text" placeholder="Ej: Extra Queso" value="${name}" class="btn-primary v-name" style="background: rgba(255,255,255,0.05); text-align: left;">
+                <input type="number" step="0.01" placeholder="Precio" value="${price}" class="btn-primary v-price" style="background: rgba(255,255,255,0.05); text-align: left; width: 100px;">
+                <button type="button" onclick="this.parentElement.remove()" style="background:red; color:white; border:none; border-radius:8px; padding:0 10px;">X</button>
+            `;
+            document.getElementById('variant-list').appendChild(div);
+        };
+
         window.closeModal = () => document.getElementById('product-modal').style.display = 'none';
 
-        window.editProduct = (p) => {
+        window.editProduct = async (p) => {
             document.getElementById('prod-id').value = p.id;
             document.getElementById('prod-name').value = p.name;
             document.getElementById('prod-category').value = p.category_id;
             document.getElementById('prod-price').value = p.price_usd;
             document.getElementById('prod-desc').value = p.description;
             document.getElementById('prod-img').value = p.image_url;
+            document.getElementById('variant-list').innerHTML = '';
+            
+            // Fetch variants for this product
+            const resp = await fetch(`../api/admin/products.php?id=${p.id}&with_variants=1`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const json = await resp.json();
+            if (json.data && json.data.variants) {
+                json.data.variants.forEach(v => addVariantRow(v.name, v.additional_price_usd));
+            }
+
             document.getElementById('modal-title').textContent = 'Editar Producto';
             document.getElementById('product-modal').style.display = 'flex';
         };
@@ -197,6 +230,12 @@
             e.preventDefault();
             const id = document.getElementById('prod-id').value;
             const method = id ? 'PUT' : 'POST';
+            
+            const variants = Array.from(document.querySelectorAll('.variant-row')).map(row => ({
+                name: row.querySelector('.v-name').value,
+                price: row.querySelector('.v-price').value
+            }));
+
             const data = {
                 id: id,
                 name: document.getElementById('prod-name').value,
@@ -204,7 +243,8 @@
                 price_usd: document.getElementById('prod-price').value,
                 description: document.getElementById('prod-desc').value,
                 image_url: document.getElementById('prod-img').value,
-                is_available: 1
+                is_available: 1,
+                variants: variants
             };
 
             await fetch('../api/admin/products.php', {

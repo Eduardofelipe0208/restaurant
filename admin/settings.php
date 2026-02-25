@@ -23,26 +23,33 @@
         <main class="main-content" style="padding: 3rem;">
             <h1>Configuración del Sistema</h1>
             
-            <form id="settings-form" class="glass" style="margin-top: 2rem; padding: 2.5rem; border-radius: 24px;">
+            <form id="settings-form" class="glass" style="margin-top: 2rem; padding: 2.5rem; border-radius: 24px;" enctype="multipart/form-data">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <div>
                         <h3 style="margin-bottom: 1.5rem;">Información Básica</h3>
                         <label style="display:block; margin-bottom:0.5rem;">Nombre del Restaurante</label>
-                        <input type="text" id="set-name" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem;">
+                        <input type="text" id="set-name" name="restaurant_name" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem;">
                         
                         <label style="display:block; margin-bottom:0.5rem;">WhatsApp (Ej: 58412...)</label>
-                        <input type="text" id="set-wa" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem;">
+                        <input type="text" id="set-wa" name="whatsapp_number" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem;">
                         
                         <label style="display:block; margin-bottom:0.5rem;">Tasa de Cambio (USD -> Bs.)</label>
-                        <input type="number" step="0.01" id="set-rate" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem; border: 2px solid var(--primary);">
+                        <input type="number" step="0.01" id="set-rate" name="exchange_rate" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem; border: 2px solid var(--primary);">
                     </div>
                     <div>
-                        <h3 style="margin-bottom: 1.5rem;">Apariencia</h3>
+                        <h3 style="margin-bottom: 1.5rem;">Branding & Pagos</h3>
                         <label style="display:block; margin-bottom:0.5rem;">Color Principal (HEX)</label>
-                        <input type="color" id="set-color" style="width:100%; height:45px; margin-bottom:1rem;">
+                        <input type="color" id="set-color" name="primary_color" style="width:100%; height:45px; margin-bottom:1rem; border-radius: 8px; border:none; cursor:pointer;">
                         
-                        <label style="display:block; margin-bottom:0.5rem;">URL del Logo</label>
-                        <input type="text" id="set-logo" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem;">
+                        <label style="display:block; margin-bottom:0.5rem;">Subir Logo (WebP)</label>
+                        <input type="file" id="set-logo-file" name="logo_file" accept="image/*" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:1rem; padding: 0.5rem;">
+                        
+                        <div id="pago-movil-fields" style="margin-top: 1.5rem;">
+                            <h4 style="margin-bottom: 1rem;">Datos Pago Móvil</h4>
+                            <input type="text" id="pm-bank" placeholder="Banco" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:0.5rem;">
+                            <input type="text" id="pm-rif" placeholder="RIF/CI" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:0.5rem;">
+                            <input type="text" id="pm-phone" placeholder="Teléfono" class="btn-primary" style="background:rgba(255,255,255,0.05); text-align:left; margin-bottom:0.5rem;">
+                        </div>
                     </div>
                 </div>
                 
@@ -63,30 +70,40 @@
             document.getElementById('set-wa').value = s.whatsapp_number;
             document.getElementById('set-rate').value = s.exchange_rate;
             document.getElementById('set-color').value = s.primary_color || '#FF6B35';
-            document.getElementById('set-logo').value = s.logo_url || '';
+            
+            if (s.pago_movil_data) {
+                const pm = typeof s.pago_movil_data === 'string' ? JSON.parse(s.pago_movil_data) : s.pago_movil_data;
+                document.getElementById('pm-bank').value = pm.bank || '';
+                document.getElementById('pm-rif').value = pm.rif || '';
+                document.getElementById('pm-phone').value = pm.phone || '';
+            }
         }
 
         document.getElementById('settings-form').onsubmit = async (e) => {
             e.preventDefault();
-            const data = {
-                restaurant_name: document.getElementById('set-name').value,
-                whatsapp_number: document.getElementById('set-wa').value,
-                exchange_rate: document.getElementById('set-rate').value,
-                primary_color: document.getElementById('set-color').value,
-                logo_url: document.getElementById('set-logo').value,
-                pago_movil_data: {} // Simplified for now
+            const formData = new FormData(e.target);
+            
+            const pmData = {
+                bank: document.getElementById('pm-bank').value,
+                rif: document.getElementById('pm-rif').value,
+                phone: document.getElementById('pm-phone').value
             };
+            formData.append('pago_movil_data', JSON.stringify(pmData));
 
             const resp = await fetch('../api/admin/settings.php', {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + token
                 },
-                body: JSON.stringify(data)
+                body: formData
             });
 
-            if (resp.ok) alert('Configuración actualizada');
+            if (resp.ok) {
+                alert('Configuración actualizada');
+                location.reload();
+            } else {
+                alert('Error al actualizar');
+            }
         };
 
         loadSettings();

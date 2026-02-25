@@ -5,8 +5,15 @@ function formatCurrency($usd, $rate) {
     return number_format($usd,2).' USD (Bs. '.number_format($bs,2).')'; 
 }
 function generateWhatsAppLink($data) {
-    $message = urlencode($data['message']);
-    return "https://wa.me/{$data['whatsapp']}/?text=".$message;
+    // Expected components: table, items_text, total_usd, total_bs, payment_method
+    $header = "*Resumen del Pedido - Mesa {$data['table']}*\n";
+    $separator = "-------------------------\n";
+    $body = $data['items_text'];
+    $footer = "Total: $".number_format($data['total_usd'], 2)." (Bs. ".number_format($data['total_bs'], 2).")\n";
+    $footer .= "Método: {$data['payment_method']}";
+    
+    $fullMessage = $header . $separator . $body . $separator . $footer;
+    return "https://wa.me/{$data['whatsapp']}/?text=" . urlencode($fullMessage);
 }
 
 function getProductPrice($id) {

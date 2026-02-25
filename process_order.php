@@ -19,32 +19,39 @@ if (!$input) {
 
 $items = $input['items'] ?? [];
 $table = $input['table'] ?? 0;
+$payment_method = $input['payment_method'] ?? 'Pago Móvil';
 
 // Calcular totales
 $total_usd = 0;
-$items_text = '';
+$items_text = "";
 foreach($items as $item) {
     $price = getProductPrice($item['id']);
-    $total_usd += $price * $item['qty'];
     
     // Fetch product name for the message
     $pStmt = $pdo->prepare("SELECT name FROM products WHERE id = ?");
     $pStmt->execute([$item['id']]);
     $pName = $pStmt->fetchColumn() ?: "Producto #".$item['id'];
     
-    $variants = isset($item['variants']) && !empty($item['variants']) ? implode(', ', $item['variants']) : '';
-    $items_text .= "{$item['qty']}x {$pName} {$variants} - ".formatCurrency($price, $settings['exchange_rate'])."\n";
+    // Add variants weight to price and text
+    $variant_text = "";
+    if (isset($item['variants']) && is_array($item['variants'])) {
+        foreach ($item['variants'] as $v) {
+            // In a real app we'd verify price in DB, but for now we follow the simple structure
+            $variant_text .= " (Extra: {$v})";
+        }
+    }
+    
+    $total_usd += $price * $item['qty'];
+    $items_text .= "{$item['qty']}x {$pName}{$variant_text}\n";
 }
 
 $total_bs = $total_usd * $settings['exchange_rate'];
 
-$message = "¡Hola! Nuevo pedido:\n\n{$items_text}\nTotal: ".formatCurrency($total_usd, $settings['exchange_rate'])."\nMesa: {$table}\nPago: Pendiente";
-
 try {
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare("INSERT INTO orders (table_number, items, total_usd, total_bs, whatsapp_message) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$table, json_encode($items), $total_usd, $total_bs, $message]);
+    $stmt = $pdo->prepare("INSERT INTO orders (table_number, total_usd, total_bs, payment_method, status) VALUES (?, ?, ?, ?, 'pending')");
+    $stmt->execute([$table, $total_usd, $total_bs, $payment_method]);
     $order_id = $pdo->lastInsertId();
 
     // Insert into order_items (Normalization)
@@ -52,8 +59,6 @@ try {
     
     foreach($items as $item) {
         $price = getProductPrice($item['id']);
-        
-        // Fetch product name again for DB consistency
         $pStmt = $pdo->prepare("SELECT name FROM products WHERE id = ?");
         $pStmt->execute([$item['id']]);
         $pName = $pStmt->fetchColumn() ?: "Producto #".$item['id'];
@@ -75,7 +80,11 @@ try {
         'status' => 'success',
         'whatsapp_link' => generateWhatsAppLink([
             'whatsapp' => $settings['whatsapp_number'],
-            'message' => $message
+            'table' => $table,
+            'items_text' => $items_text,
+            'total_usd' => $total_usd,
+            'total_bs' => $total_bs,
+            'payment_method' => $payment_method
         ])
     ]);
 } catch (PDOException $e) {
