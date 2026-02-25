@@ -9,6 +9,8 @@ CREATE TABLE settings (
     pago_movil_data JSON,
     logo_url VARCHAR(255),
     primary_color VARCHAR(7) DEFAULT '#FF6B35',
+    price_source ENUM('manual', 'api') DEFAULT 'manual',
+    last_sync_at TIMESTAMP NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
@@ -52,6 +54,18 @@ CREATE TABLE orders (
     status ENUM('pending','confirmed','preparing','ready','delivered') DEFAULT 'pending',
     whatsapp_message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT,
+    product_id INT,
+    product_name VARCHAR(100),
+    quantity INT,
+    unit_price_usd DECIMAL(10,2),
+    subtotal_usd DECIMAL(10,2),
+    variants_json JSON,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 CREATE TABLE users (

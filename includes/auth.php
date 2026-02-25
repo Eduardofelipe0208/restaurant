@@ -5,9 +5,12 @@
  */
 
 class JWT {
-    private static $secret = 'GOCHABURGUER_SECRET_KEY_2024'; // In production, move to env/config
+    private static function getSecret() {
+        return $_ENV['JWT_SECRET'] ?? 'fallback-secret-for-dev-only';
+    }
 
     public static function encode($payload) {
+        $secret = self::getSecret();
         $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
         
         $base64UrlHeader = self::base64UrlEncode($header);
@@ -25,7 +28,7 @@ class JWT {
         
         list($header, $payload, $signature) = $parts;
         
-        $validSignature = hash_hmac('sha256', $header . "." . $payload, self::$secret, true);
+        $validSignature = hash_hmac('sha256', $header . "." . $payload, self::getSecret(), true);
         if (self::base64UrlEncode($validSignature) !== $signature) return false;
         
         $decodedPayload = json_decode(self::base64UrlDecode($payload), true);

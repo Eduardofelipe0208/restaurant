@@ -41,8 +41,35 @@ $total_bs = $total_usd * $settings['exchange_rate'];
 $message = "¡Hola! Nuevo pedido:\n\n{$items_text}\nTotal: ".formatCurrency($total_usd, $settings['exchange_rate'])."\nMesa: {$table}\nPago: Pendiente";
 
 try {
+    $pdo->beginTransaction();
+
     $stmt = $pdo->prepare("INSERT INTO orders (table_number, items, total_usd, total_bs, whatsapp_message) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([$table, json_encode($items), $total_usd, $total_bs, $message]);
+    $order_id = $pdo->lastInsertId();
+
+    // Insert into order_items (Normalization)
+    $itemStmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price_usd, subtotal_usd, variants_json) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    
+    foreach($items as $item) {
+        $price = getProductPrice($item['id']);
+        
+        // Fetch product name again for DB consistency
+        $pStmt = $pdo->prepare("SELECT name FROM products WHERE id = ?");
+        $pStmt->execute([$item['id']]);
+        $pName = $pStmt->fetchColumn() ?: "Producto #".$item['id'];
+        
+        $itemStmt->execute([
+            $order_id,
+            $item['id'],
+            $pName,
+            $item['qty'],
+            $price,
+            $price * $item['qty'],
+            json_encode($item['variants'] ?? [])
+        ]);
+    }
+
+    $pdo->commit();
 
     echo json_encode([
         'status' => 'success',
@@ -52,6 +79,7 @@ try {
         ])
     ]);
 } catch (PDOException $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }
 ?>
