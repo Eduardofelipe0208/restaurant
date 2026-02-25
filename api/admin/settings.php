@@ -11,7 +11,7 @@ try {
 
     // Handle Logo Upload
     if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = '../../assets/img/';
+        $uploadDir = '../../assets/uploads/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
         
         $tmpName = $_FILES['logo_file']['tmp_name'];
@@ -27,11 +27,11 @@ try {
         if ($img) {
             imagewebp($img, $destPath, 80);
             imagedestroy($img);
-            $logoUrl = 'assets/img/' . $newName;
+            $logoUrl = 'assets/uploads/' . $newName;
         } else {
             // Fallback: move as is if not jpeg/png
             move_uploaded_file($tmpName, $destPath);
-            $logoUrl = 'assets/img/' . $newName;
+            $logoUrl = 'assets/uploads/' . $newName;
         }
     }
 
